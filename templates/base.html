@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Authentication</title>
+    <title>Crypass - Password Encryption Manager</title>
     <link
       rel="stylesheet"
       href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
@@ -19,11 +19,15 @@
       href="{{ url_for('static', filename='images/secure.png')}}"
       type="image/x-icon"
     />
+    <!-- Font Awesome -->
+    <script defer src="https://use.fontawesome.com/releases/v5.0.7/js/all.js"></script>
   </head>
 
   <body>
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
-      <a class="navbar-brand" href="/">Authentication</a>
+      <a class="navbar-brand" href="{{ url_for('home') }}">
+        <img src="..\static\images\secure.png" width="40" height="40" alt="" /> Crypass
+      </a>
       <div class="collapse navbar-collapse">
         <ul class="navbar-nav ml-auto">
           {% if not logged_in: %}

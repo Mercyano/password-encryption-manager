@@ -1,10 +1,11 @@
 import random
 import string
-from flask import Flask, render_template, request, url_for, redirect, flash, send_from_directory
+from flask import Flask, render_template, request, url_for, redirect, flash, send_from_directory, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
 from flask_mail import Mail, Message
+import json
 
 app = Flask(__name__)
 
@@ -39,6 +40,15 @@ class User(UserMixin, db.Model):
     alamat = db.Column(db.String(1000))
     telp = db.Column(db.String(20))
     token = db.Column(db.String(120))
+    passwordset = db.relationship('Passwords')
+
+class Passwords(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    app = db.Column(db.String(1000))
+    password = db.Column(db.String(1000))
+    id_user = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+
 db.create_all()
 
 
@@ -98,11 +108,13 @@ def login():
     return render_template("login.html", logged_in=current_user.is_authenticated)
 
 
-@app.route('/secrets')
+@app.route('/secrets', methods=["GET", "POST"])
 @login_required
 def secrets():
+    if request.method == "POST":
+        id = request.form.get('id')
     print(current_user.username)
-    return render_template("secrets.html", name=current_user.username, logged_in=True)
+    return render_template("secrets.html", user=current_user, logged_in=True)
 
 
 @app.route('/logout')
@@ -119,7 +131,7 @@ def reset():
         user = User.query.filter_by(email=email).first()
         # Email doesn't exist or password incorrect.
         if not user:
-            flash("That email does not exist, please try again.")
+            flash("That email does not exist, please try again.", category="error")
             return redirect(url_for('reset'))
         else:
             token = ''.join(random.choices(
@@ -130,7 +142,7 @@ def reset():
                           sender='noreply.staybatu@gmail.com', recipients=[email])
             msg.body = f"Hello,\nWe've received a request to reset your password. If you want to reset your password, click the link below and enter your new password\n http://localhost:5000/reset/{user.token}"
             posta.send(msg)
-            flash("Please check your email for password reset!")
+            flash("Please check your email for password reset!", category="success")
 
     return render_template("reset.html")
 
@@ -160,6 +172,37 @@ def token(token):
 
     return render_template('change_password.html')
 
+@app.route('/addPassword', methods=["GET", "POST"])
+@login_required
+def addPassword():
+    if request.method == "POST":
+        # Hashing
+        hash_password = generate_password_hash(
+            request.form.get('password'),
+            method='md5',
+        )
+        new_password = Passwords(
+            app=request.form.get('app'),
+            password=hash_password,
+            id_user=current_user.id
+        )
+        db.session.add(new_password)
+        db.session.commit()
+        return redirect(url_for("secrets"))
+
+    return render_template("addPassword.html", user=current_user, logged_in=True)
+
+@app.route('/delete-pass', methods=['POST'])
+def delete_pass():
+    passw = json.loads(request.data)
+    passId = passw['passId']
+    passw = Passwords.query.get(passId)
+    if passw:
+        if passw.id_user == current_user.id:
+            db.session.delete(passw)
+            db.session.commit()
+
+    return jsonify({})
 
 if __name__ == "__main__":
     app.run(debug=True)
